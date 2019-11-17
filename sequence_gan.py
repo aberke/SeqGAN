@@ -174,8 +174,7 @@ def main():
 
     rollout = ROLLOUT(generator, 0.8)
 
-    print '#########################################################################'
-    write_log('Start Adversarial Training...')
+    write_log(log_fpath, 'Start Adversarial Training...')
     for batch in range(TOTAL_BATCH):
         buff = 'batch %s/%s' % (batch, TOTAL_BATCH)
         write_log(log_fpath, buff)
