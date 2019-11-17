@@ -10,6 +10,7 @@ for the trajectory data, sequence lengths are 14 x 24 + 2 = 338
 
 ### Environment 
 
+#### Conda env
 
 (Do these steps once)
 
@@ -32,8 +33,6 @@ $ conda activate seqGAN
 ```
 $ conda deactivate
 ```
-
-
 
 
 

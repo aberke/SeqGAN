@@ -11,6 +11,9 @@ from target_lstm import TARGET_LSTM
 import cPickle
 
 
+USE_GPU = False
+
+
 #########################################################################################
 #  Data Specific
 #########################################################################################
@@ -27,7 +30,6 @@ negative_file = 'save/generator_sample.txt'
 eval_file = 'save/eval_file.txt'
 generated_num = 10000  #  num trajectories: 23238
 
-EXPERIMENT_LOG_FILEPATH = 'save/experiment-log.txt'
 
 #########################################################################################
 #  Generator  Hyper-parameters
@@ -90,14 +92,18 @@ def pre_train_epoch(sess, trainable_model, data_loader):
     return np.mean(supervised_g_losses)
 
 
-def log_progress(fhandler, epoch, loss):
+def get_experiment_log_filepath():
+    return 'save/experiment-log-%s.txt' % datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+
+def log_progress(fpath, epoch, loss):
     datestring = datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
     buff = datestring + '\tepoch:\t'+ str(epoch) + '\tnll:\t' + str(loss) + '\n'
-    return write_log(fhandler, buff)
+    return write_log(fpath, buff)
 
-def write_log(fhandler, buff):
+def write_log(fpath, buff):
     print buff
-    fhandler.write(buff + '\n')
+    with open(fpath, 'a') as f:
+        f.write(buff + '\n')
     return buff
 
 
@@ -118,6 +124,10 @@ def main():
     discriminator = Discriminator(sequence_length=20, num_classes=2, vocab_size=vocab_size, embedding_size=dis_embedding_dim, 
                                 filter_sizes=dis_filter_sizes, num_filters=dis_num_filters, l2_reg_lambda=dis_l2_reg_lambda)
 
+    if not USE_GPU:
+        # Prevent the environment from seeing the available GPUs (to avoid error on matlaber cluster)
+        import os
+        os.environ["CUDA_VISIBLE_DEVICES"]="-1"
     config = tf.ConfigProto()
     config.gpu_options.allow_growth = True
     sess = tf.Session(config=config)
@@ -128,19 +138,19 @@ def main():
     gen_data_loader.create_batches(positive_file)
     # gen_data_loader.create_batches(trajectory_file)
 
-    log_f = open(EXPERIMENT_LOG_FILEPATH, 'w')
+    log_fpath = get_experiment_log_filepath()
     #  pre-train generator
-    write_log(log_f, 'pre-training generator...')
+    write_log(log_fpath, 'pre-training generator...')
     for epoch in xrange(PRE_EPOCH_NUM):
         loss = pre_train_epoch(sess, generator, gen_data_loader)
         if epoch % 5 == 0:
-            write_log(log_f, 'generator loss:')
-            log_progress(log_f, epoch, loss)
+            write_log(log_fpath, 'generator loss:')
+            log_progress(log_fpath, epoch, loss)
             generate_samples(sess, generator, BATCH_SIZE, generated_num, eval_file)
             likelihood_data_loader.create_batches(eval_file)
-            write_log(log_f, 'vs target LSTM loss:')
+            write_log(log_fpath, 'vs target LSTM loss:')
             test_loss = target_loss(sess, target_lstm, likelihood_data_loader)
-            log_progress(log_f, epoch, test_loss)
+            log_progress(log_fpath, epoch, test_loss)
 
     print 'Start pre-training discriminator...'
     # Train 3 epoch on the generated data and do this for 50 times
@@ -165,7 +175,7 @@ def main():
     write_log('Start Adversarial Training...')
     for batch in range(TOTAL_BATCH):
         buff = 'batch %s/%s' % (batch, TOTAL_BATCH)
-        write_log(log_f, buff)
+        write_log(log_fpath, buff)
         # Train the generator for one step
         for it in range(1):
             samples = generator.generate(sess)
@@ -178,7 +188,7 @@ def main():
             generate_samples(sess, generator, BATCH_SIZE, generated_num, eval_file)
             likelihood_data_loader.create_batches(eval_file)
             test_loss = target_loss(sess, target_lstm, likelihood_data_loader)
-            log_progress(log_f, batch, test_loss)
+            log_progress(log_fpath, batch, test_loss)
 
         # Update roll-out parameters
         rollout.update_params()
@@ -200,8 +210,7 @@ def main():
                     }
                     _ = sess.run(discriminator.train_op, feed)
 
-    log_progress(log_f, 'DONE')
-    log_f.close()
+    log_progress(log_fpath, 'DONE')
 
 
 if __name__ == '__main__':
