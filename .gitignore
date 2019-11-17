@@ -97,4 +97,9 @@ ENV/
 # For mac
 .DS_Store
 
+# project specific
 save/experiment-log*
+
+nohup.out
+process.out
+process.err
