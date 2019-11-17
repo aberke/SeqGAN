@@ -1,5 +1,42 @@
 # SeqGAN
 
+
+## My notes...
+
+
+for the trajectory data, sequence lengths are 14 x 24 + 2 = 338
+
+
+
+### Environment 
+
+
+(Do these steps once)
+
+
+```
+$ conda config --add channels conda-forge
+```
+Make the environment
+```
+$ conda create --name seqGAN python=2.7 tensorflow
+```
+i failed to find r1.0.1 -- will that. be a. problem?
+
+
+(Do these steps for each hack)
+```
+$ conda activate seqGAN
+```
+.... later ...
+```
+$ conda deactivate
+```
+
+
+
+
+
 ## Requirements: 
 * **Tensorflow r1.0.1**
 * Python 2.7
