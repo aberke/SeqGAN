@@ -188,7 +188,7 @@ def main():
         # Test
         if batch % 5 == 0 or batch == TOTAL_BATCH - 1:
             generate_samples(sess, generator, BATCH_SIZE, generated_num, eval_trajectory_file)
-            write_log(fpath, 'generated some more eval samples...')
+            write_log(log_fpath, 'generated some more eval samples...')
             # likelihood_data_loader.create_batches(eval_file)
             # test_loss = target_loss(sess, target_lstm, likelihood_data_loader)
             # log_progress(log_fpath, batch, test_loss)
@@ -213,7 +213,7 @@ def main():
                     }
                     _ = sess.run(discriminator.train_op, feed)
 
-    write_log(log_fpath, 'DONE')
+    write_log(log_fpath, 'I\'M DONE')
 
 
 if __name__ == '__main__':
