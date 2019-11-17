@@ -2,18 +2,19 @@ import numpy as np
 
 
 class Gen_Data_loader():
-    def __init__(self, batch_size):
+    def __init__(self, batch_size, seq_length):
+        self.seq_length = seq_length
         self.batch_size = batch_size
         self.token_stream = []
 
     def create_batches(self, data_file):
         self.token_stream = []
         with open(data_file, 'r') as f:
-            for line in f:
+            for _i, line in enumerate(f):
                 line = line.strip()
                 line = line.split()
                 parse_line = [int(x) for x in line]
-                if len(parse_line) == 20:
+                if len(parse_line) == self.seq_length:
                     self.token_stream.append(parse_line)
 
         self.num_batch = int(len(self.token_stream) / self.batch_size)
@@ -31,8 +32,9 @@ class Gen_Data_loader():
 
 
 class Dis_dataloader():
-    def __init__(self, batch_size):
+    def __init__(self, batch_size, seq_length):
         self.batch_size = batch_size
+        self.seq_length = seq_length
         self.sentences = np.array([])
         self.labels = np.array([])
 
@@ -51,7 +53,7 @@ class Dis_dataloader():
                 line = line.strip()
                 line = line.split()
                 parse_line = [int(x) for x in line]
-                if len(parse_line) == 20:
+                if len(parse_line) == self.seq_length:
                     negative_examples.append(parse_line)
         self.sentences = np.array(positive_examples + negative_examples)
 
