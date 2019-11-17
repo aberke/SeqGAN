@@ -154,13 +154,14 @@ def main():
             # test_loss = target_loss(sess, target_lstm, likelihood_data_loader)
             # log_progress(log_fpath, epoch, test_loss)
 
-    print 'Start pre-training discriminator...'
+    write_log(log_fpath, 'Start pre-training discriminator...')
     # Train 3 epoch on the generated data and do this for 50 times
-    for _ in range(50):
+    for i in range(50):
         generate_samples(sess, generator, BATCH_SIZE, generated_num, fake_trajectory_file)
         dis_data_loader.load_train_data(real_trajectory_file, fake_trajectory_file)
         # dis_data_loader.load_train_data(positive_file, negative_file)
-        for _ in range(3):
+        write_log(log_fpath, 'epoch iterator:  %s / 50' % i)
+        for j in range(3):
             dis_data_loader.reset_pointer()
             for it in xrange(dis_data_loader.num_batch):
                 x_batch, y_batch = dis_data_loader.next_batch()
