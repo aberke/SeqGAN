@@ -173,6 +173,7 @@ def main():
                 }
                 _ = sess.run(discriminator.train_op, feed)
 
+    write_log(log_fpath, 'finished pre-training discriminator')
     rollout = ROLLOUT(generator, 0.8)
 
     write_log(log_fpath, 'Start Adversarial Training...')
