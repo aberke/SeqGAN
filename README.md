@@ -1,16 +1,9 @@
 # SeqGAN
 
-
-## My notes...
-
-
-for the trajectory data, sequence lengths are 14 x 24 + 2 = 338
+## My Notes
 
 
-
-### Environment 
-
-#### Conda env
+### Environment & Run
 
 (Do these steps once)
 
@@ -22,13 +15,23 @@ Make the environment
 ```
 $ conda create --name seqGAN python=2.7 tensorflow
 ```
-i failed to find r1.0.1 -- will that. be a. problem?
 
 
 (Do these steps for each hack)
 ```
 $ conda activate seqGAN
 ```
+
+Run
+```
+$ python sequence_gan.py
+```
+
+Running remotely
+```
+$ nohup python sequence_gan.py > process.out 2> process.err < /dev/null &
+```
+
 .... later ...
 ```
 $ conda deactivate

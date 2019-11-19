@@ -23,8 +23,9 @@ USE_GPU = False
 # previously: 5000
 VOCAB_SIZE = 652  # There are this many unique labels in the trajectory file
 # previously: 20
-SEQ_LENGTH = 338  # <-- for trajectory data # sequence length
-real_trajectory_file = 'data/relabeled_trajectories_2_weeks.txt'
+SEQ_LENGTH = 122  # <-- for trajectory data # sequence length
+
+real_trajectory_file = 'data/relabeled_trajectories_1_workweek.txt'
 fake_trajectory_file = 'save/generated_trajectory_samples.txt'
 eval_trajectory_file = 'save/eval_trajectory_file.txt'
 
@@ -32,7 +33,7 @@ TOTAL_BATCH = 200
 positive_file = 'save/real_data.txt'
 negative_file = 'save/generator_sample.txt'
 eval_file = 'save/eval_file.txt'
-generated_num = 23238  #  num trajectories: 23238.   Was previously set to 10000
+generated_num = 10000  #  num trajectories: 23238.
 
 
 #########################################################################################
