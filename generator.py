@@ -1,6 +1,8 @@
 import tensorflow as tf
 from tensorflow.python.ops import tensor_array_ops, control_flow_ops
 
+import logger
+
 
 class Generator(object):
     def __init__(self, num_emb, batch_size, emb_dim, hidden_dim,
@@ -55,14 +57,14 @@ class Generator(object):
                                                                  tf.nn.softmax(o_t)), 1))  # [batch_size] , prob
                 gen_x = gen_x.write(i, next_token)  # indices, batch_size
             except Exception as e:
-                print '--------- CAUGHT ERROR ---------'
-                print e
-                print 'h_t', h_t
-                print 'o_t', o_t
-                print 'log_prob', log_prob
-                print 'next_token', next_token
-                print 'tf.nn.embedding_lookup(self.g_embeddings, next_token)'
-                print tf.nn.embedding_lookup(self.g_embeddings, next_token)
+                logger.log_error('--------- CAUGHT ERROR ---------')
+                logger.log_error(e)
+                logger.log_error('h_t', h_t)
+                logger.log_error('o_t', o_t)
+                logger.log_error('log_prob', log_prob)
+                logger.log_error('next_token', next_token)
+                logger.log_error('tf.nn.embedding_lookup(self.g_embeddings, next_token)')
+                logger.log_error(tf.nn.embedding_lookup(self.g_embeddings, next_token))
             return i + 1, x_tp1, h_t, gen_o, gen_x
 
         _, _, _, self.gen_o, self.gen_x = control_flow_ops.while_loop(
