@@ -97,11 +97,12 @@ def get_experiment_log_filepath():
     return 'save/experiment-log-%s.txt' % datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
 
 def log_progress(fpath, epoch, loss):
-    datestring = datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
-    buff = datestring + '\tepoch:\t'+ str(epoch) + '\tnll:\t' + str(loss) + '\n'
+    buff = 'epoch:\t'+ str(epoch) + '\tnll:\t' + str(loss) + '\n'
     return write_log(fpath, buff)
 
 def write_log(fpath, buff):
+    datestring = datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+    buff = datestring + '\t' + buff
     print buff
     with open(fpath, 'a') as f:
         f.write(buff + '\n')
