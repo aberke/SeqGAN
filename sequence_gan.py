@@ -1,4 +1,4 @@
-import datetime
+
 import numpy as np
 import tensorflow as tf
 import random
@@ -9,6 +9,8 @@ from discriminator import Discriminator
 from rollout import ROLLOUT
 from target_lstm import TARGET_LSTM
 import cPickle
+
+import logger
 
 
 USE_GPU = False
@@ -21,8 +23,9 @@ USE_GPU = False
 # previously: 5000
 VOCAB_SIZE = 652  # There are this many unique labels in the trajectory file
 # previously: 20
-SEQ_LENGTH = 338  # <-- for trajectory data # sequence length
-real_trajectory_file = 'data/relabeled_trajectories_2_weeks.txt'
+SEQ_LENGTH = 122  # <-- for trajectory data # sequence length
+
+real_trajectory_file = 'data/relabeled_trajectories_1_workweek.txt'
 fake_trajectory_file = 'save/generated_trajectory_samples.txt'
 eval_trajectory_file = 'save/eval_trajectory_file.txt'
 
@@ -30,7 +33,7 @@ TOTAL_BATCH = 200
 positive_file = 'save/real_data.txt'
 negative_file = 'save/generator_sample.txt'
 eval_file = 'save/eval_file.txt'
-generated_num = 23238  #  num trajectories: 23238.   Was previously set to 10000
+generated_num = 10000  #  num trajectories: 23238.
 
 
 #########################################################################################
@@ -93,21 +96,6 @@ def pre_train_epoch(sess, trainable_model, data_loader):
     return np.mean(supervised_g_losses)
 
 
-def get_experiment_log_filepath():
-    return 'save/experiment-log-%s.txt' % datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
-
-def log_progress(fpath, epoch, loss):
-    datestring = datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
-    buff = datestring + '\tepoch:\t'+ str(epoch) + '\tnll:\t' + str(loss) + '\n'
-    return write_log(fpath, buff)
-
-def write_log(fpath, buff):
-    print buff
-    with open(fpath, 'a') as f:
-        f.write(buff + '\n')
-    return buff
-
-
 def main():
     random.seed(SEED)
     np.random.seed(SEED)
@@ -140,27 +128,27 @@ def main():
     gen_data_loader.create_batches(real_trajectory_file)
 
     # set up logging
-    log_fpath = get_experiment_log_filepath()
+    log_fpath = logger.get_experiment_log_filepath()
     #  pre-train generator
-    write_log(log_fpath, 'pre-training generator...')
+    logger.write_log(log_fpath, 'pre-training generator...')
     for epoch in xrange(PRE_EPOCH_NUM):
         loss = pre_train_epoch(sess, generator, gen_data_loader)
         if epoch % 5 == 0:
-            write_log(log_fpath, 'generator loss:')
-            log_progress(log_fpath, epoch, loss)
+            logger.write_log(log_fpath, 'generator loss:')
+            logger.log_progress(log_fpath, epoch, loss)
             generate_samples(sess, generator, BATCH_SIZE, generated_num, eval_file)
             # likelihood_data_loader.create_batches(eval_file)
             # write_log(log_fpath, 'vs target LSTM loss:')
             # test_loss = target_loss(sess, target_lstm, likelihood_data_loader)
             # log_progress(log_fpath, epoch, test_loss)
 
-    write_log(log_fpath, 'Start pre-training discriminator...')
+    logger.write_log(log_fpath, 'Start pre-training discriminator...')
     # Train 3 epoch on the generated data and do this for 50 times
     for i in range(50):
         generate_samples(sess, generator, BATCH_SIZE, generated_num, fake_trajectory_file)
         dis_data_loader.load_train_data(real_trajectory_file, fake_trajectory_file)
         # dis_data_loader.load_train_data(positive_file, negative_file)
-        write_log(log_fpath, 'epoch iterator:  %s / 50' % i)
+        logger.write_log(log_fpath, 'epoch iterator:  %s / 50' % i)
         for j in range(3):
             dis_data_loader.reset_pointer()
             for it in xrange(dis_data_loader.num_batch):
@@ -172,12 +160,13 @@ def main():
                 }
                 _ = sess.run(discriminator.train_op, feed)
 
+    logger.write_log(log_fpath, 'finished pre-training discriminator')
     rollout = ROLLOUT(generator, 0.8)
 
-    write_log(log_fpath, 'Start Adversarial Training...')
+    logger.write_log(log_fpath, 'Start Adversarial Training...')
     for batch in range(TOTAL_BATCH):
         buff = 'batch %s/%s' % (batch, TOTAL_BATCH)
-        write_log(log_fpath, buff)
+        logger.write_log(log_fpath, buff)
         # Train the generator for one step
         for it in range(1):
             samples = generator.generate(sess)
@@ -188,10 +177,10 @@ def main():
         # Test
         if batch % 5 == 0 or batch == TOTAL_BATCH - 1:
             generate_samples(sess, generator, BATCH_SIZE, generated_num, eval_trajectory_file)
-            write_log(log_fpath, 'generated some more eval samples...')
+            logger.write_log(log_fpath, 'generated some more eval samples...')
             # likelihood_data_loader.create_batches(eval_file)
             # test_loss = target_loss(sess, target_lstm, likelihood_data_loader)
-            # log_progress(log_fpath, batch, test_loss)
+            # logger.log_progress(log_fpath, batch, test_loss)
 
         # Update roll-out parameters
         rollout.update_params()
@@ -213,7 +202,7 @@ def main():
                     }
                     _ = sess.run(discriminator.train_op, feed)
 
-    write_log(log_fpath, 'I\'M DONE')
+    logger.write_log(log_fpath, 'I\'M DONE')
 
 
 if __name__ == '__main__':
