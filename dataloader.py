@@ -55,6 +55,12 @@ class Dis_dataloader():
                 parse_line = [int(x) for x in line]
                 if len(parse_line) == self.seq_length:
                     negative_examples.append(parse_line)
+
+        # Make it so that the number of positive examples matches the number of negative examples.
+        # We have extra positive examples, so use a random subset
+        if len(positive_examples) > len(negative_examples):
+            positive_examples = np.random.permutation(positive_examples)[:len(negative_examples)]
+
         self.sentences = np.array(positive_examples + negative_examples)
 
         # Generate labels
