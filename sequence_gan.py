@@ -25,23 +25,20 @@ VOCAB_SIZE = 652  # There are this many unique labels in the trajectory file
 # previously: 20
 SEQ_LENGTH = 122  # <-- for trajectory data # sequence length
 
-real_trajectory_file = 'data/relabeled_trajectories_1_workweek.txt'
-fake_trajectory_file = 'save/generated_trajectory_samples.txt'
-eval_trajectory_file = 'save/eval_trajectory_file.txt'
+real_file = 'data/relabeled_trajectories_1_workweek.txt'
+fake_file = 'save/generated_trajectories.txt'
+eval_file = 'save/eval_file_{}.txt'
 
 TOTAL_BATCH = 200
-positive_file = 'save/real_data.txt'
-negative_file = 'save/generator_sample.txt'
-eval_file = 'save/eval_file.txt'
-generated_num = 10000  #  num trajectories: 23238.
+generated_num = 1000  #  Previously set to 10,000; num trajectories: 23238.
 
 
 #########################################################################################
 #  Generator  Hyper-parameters
 ######################################################################################
-EMB_DIM = 32 # embedding dimension
+EMB_DIM = 128 # embedding dimension -- Changed from original value of 32
 HIDDEN_DIM = 32 # hidden state dimension of lstm cell
-START_TOKEN = 0
+START_TOKEN = 1  # Changed from original value of 0.
 PRE_EPOCH_NUM = 120  # supervise (maximum likelihood estimation) epochs
 SEED = 88
 BATCH_SIZE = 64
@@ -99,7 +96,10 @@ def pre_train_epoch(sess, trainable_model, data_loader):
 def main():
     random.seed(SEED)
     np.random.seed(SEED)
-    assert START_TOKEN == 0
+    # TODO: I changed this.  Why was this asserted?  Was it just to ensure the replication
+    # of results?  Or is zero important otherwise?
+    # Changed because 0 is a bad start token for our data.  (cannot have home label=0)
+    # assert START_TOKEN == 0
 
     gen_data_loader = Gen_Data_loader(BATCH_SIZE, SEQ_LENGTH)
     likelihood_data_loader = Gen_Data_loader(BATCH_SIZE, SEQ_LENGTH) # For testing
@@ -107,9 +107,6 @@ def main():
     dis_data_loader = Dis_dataloader(BATCH_SIZE, SEQ_LENGTH)
 
     generator = Generator(vocab_size, BATCH_SIZE, EMB_DIM, HIDDEN_DIM, SEQ_LENGTH, START_TOKEN)
-    # target_params = cPickle.load(open('save/target_params.pkl'))
-    # target_lstm = TARGET_LSTM(vocab_size, BATCH_SIZE, EMB_DIM, HIDDEN_DIM, SEQ_LENGTH, START_TOKEN, target_params) # The oracle model
-
     discriminator = Discriminator(sequence_length=SEQ_LENGTH, num_classes=2, vocab_size=vocab_size, embedding_size=dis_embedding_dim, 
                                 filter_sizes=dis_filter_sizes, num_filters=dis_num_filters, l2_reg_lambda=dis_l2_reg_lambda)
 
@@ -122,10 +119,7 @@ def main():
     sess = tf.Session(config=config)
     sess.run(tf.global_variables_initializer())
 
-    # First, use the oracle model to provide the positive examples, which are sampled from the oracle data distribution
-    # generate_samples(sess, target_lstm, BATCH_SIZE, generated_num, positive_file)
-    # gen_data_loader.create_batches(positive_file)
-    gen_data_loader.create_batches(real_trajectory_file)
+    gen_data_loader.create_batches(real_file)
 
     # set up logging
     log_fpath = logger.get_experiment_log_filepath()
@@ -136,17 +130,13 @@ def main():
         if epoch % 5 == 0:
             logger.write_log(log_fpath, 'generator loss:')
             logger.log_progress(log_fpath, epoch, loss)
-            generate_samples(sess, generator, BATCH_SIZE, generated_num, eval_file)
-            # likelihood_data_loader.create_batches(eval_file)
-            # write_log(log_fpath, 'vs target LSTM loss:')
-            # test_loss = target_loss(sess, target_lstm, likelihood_data_loader)
-            # log_progress(log_fpath, epoch, test_loss)
+            generate_samples(sess, generator, BATCH_SIZE, generated_num, eval_file.format('pretrain'))
 
     logger.write_log(log_fpath, 'Start pre-training discriminator...')
     # Train 3 epoch on the generated data and do this for 50 times
     for i in range(50):
-        generate_samples(sess, generator, BATCH_SIZE, generated_num, fake_trajectory_file)
-        dis_data_loader.load_train_data(real_trajectory_file, fake_trajectory_file)
+        generate_samples(sess, generator, BATCH_SIZE, generated_num, fake_file)
+        dis_data_loader.load_train_data(real_file, fake_file)
         # dis_data_loader.load_train_data(positive_file, negative_file)
         logger.write_log(log_fpath, 'epoch iterator:  %s / 50' % i)
         for j in range(3):
@@ -176,20 +166,16 @@ def main():
 
         # Test
         if batch % 5 == 0 or batch == TOTAL_BATCH - 1:
-            generate_samples(sess, generator, BATCH_SIZE, generated_num, eval_trajectory_file)
+            generate_samples(sess, generator, BATCH_SIZE, generated_num, eval_file.format(batch))
             logger.write_log(log_fpath, 'generated some more eval samples...')
-            # likelihood_data_loader.create_batches(eval_file)
-            # test_loss = target_loss(sess, target_lstm, likelihood_data_loader)
-            # logger.log_progress(log_fpath, batch, test_loss)
 
         # Update roll-out parameters
         rollout.update_params()
 
         # Train the discriminator
         for _ in range(5):
-            generate_samples(sess, generator, BATCH_SIZE, generated_num, fake_trajectory_file)
-            dis_data_loader.load_train_data(real_trajectory_file, fake_trajectory_file)
-            # dis_data_loader.load_train_data(positive_file, negative_file)
+            generate_samples(sess, generator, BATCH_SIZE, generated_num, fake_file)
+            dis_data_loader.load_train_data(real_file, fake_file)
 
             for _ in range(3):
                 dis_data_loader.reset_pointer()
