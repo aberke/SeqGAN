@@ -160,7 +160,8 @@ def main():
         # Train the generator for one step
         for it in range(1):
             samples = generator.generate(sess)
-            rewards = rollout.get_reward(sess, samples, 16, discriminator)
+            update_rate = 16  # TODO: experiment with this value
+            rewards = rollout.get_reward(sess, samples, update_rate, discriminator)
             feed = {generator.x: samples, generator.rewards: rewards}
             _ = sess.run(generator.g_updates, feed_dict=feed)
 
