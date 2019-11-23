@@ -30,7 +30,8 @@ fake_file = 'save/generated_trajectories.txt'
 eval_file = 'save/eval_file_{}.txt'
 
 TOTAL_BATCH = 200
-generated_num = 1000  #  Previously set to 10,000; num trajectories: 23238.
+generated_num = 5000  #  Previously set to 10,000; num trajectories: 23238.
+evale_generated_num = 1000 # For eval files, print less
 
 
 #########################################################################################
@@ -130,7 +131,7 @@ def main():
         if epoch % 5 == 0:
             logger.write_log(log_fpath, 'generator loss:')
             logger.log_progress(log_fpath, epoch, loss)
-            generate_samples(sess, generator, BATCH_SIZE, generated_num, eval_file.format('pretrain'))
+            generate_samples(sess, generator, BATCH_SIZE, evale_generated_num, eval_file.format('pretrain'))
 
     logger.write_log(log_fpath, 'Start pre-training discriminator...')
     # Train 3 epoch on the generated data and do this for 50 times
@@ -167,7 +168,7 @@ def main():
 
         # Test
         if batch % 5 == 0 or batch == TOTAL_BATCH - 1:
-            generate_samples(sess, generator, BATCH_SIZE, generated_num, eval_file.format(batch))
+            generate_samples(sess, generator, BATCH_SIZE, evale_generated_num, eval_file.format(batch))
             logger.write_log(log_fpath, 'generated some more eval samples...')
 
         # Update roll-out parameters
