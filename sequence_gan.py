@@ -41,7 +41,7 @@ HIDDEN_DIM = 32 # hidden state dimension of lstm cell
 START_TOKEN = 1  # Changed from original value of 0.
 PRE_EPOCH_NUM = 120  # supervise (maximum likelihood estimation) epochs
 SEED = 88
-BATCH_SIZE = 64
+BATCH_SIZE = 50
 
 #########################################################################################
 #  Discriminator  Hyper-parameters
@@ -51,7 +51,7 @@ dis_filter_sizes = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20]
 dis_num_filters = [100, 200, 200, 200, 200, 100, 100, 100, 100, 100, 160, 160]
 dis_dropout_keep_prob = 0.75
 dis_l2_reg_lambda = 0.2
-dis_batch_size = 64
+dis_batch_size = 50
 
 
 def generate_samples(sess, trainable_model, batch_size, generated_num, output_file):
