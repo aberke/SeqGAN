@@ -61,7 +61,7 @@ class Dis_dataloader():
         if len(positive_examples) > len(negative_examples):
             positive_examples = np.random.permutation(positive_examples)[:len(negative_examples)]
 
-        self.sentences = np.array(positive_examples + negative_examples)
+        self.sentences = np.concatenate([positive_examples, negative_examples], 0)
 
         # Generate labels
         positive_labels = [[0, 1] for _ in positive_examples]
