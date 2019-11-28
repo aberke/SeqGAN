@@ -7,7 +7,6 @@ from dataloader import Gen_Data_loader, Dis_dataloader
 from generator import Generator
 from discriminator import Discriminator
 from rollout import ROLLOUT
-from target_lstm import TARGET_LSTM
 import cPickle
 
 import logger
@@ -31,14 +30,14 @@ eval_file = 'save/eval_file_{}.txt'
 
 TOTAL_BATCH = 200
 generated_num = 5000  #  Previously set to 10,000; num trajectories: 23238.
-evale_generated_num = 1000 # For eval files, print less
+eval_generated_num = 500 # For eval files, print less
 
 
 #########################################################################################
 #  Generator  Hyper-parameters
 ######################################################################################
 EMB_DIM = 128 # embedding dimension -- Changed from original value of 32
-HIDDEN_DIM = 32 # hidden state dimension of lstm cell
+HIDDEN_DIM = 48 # hidden state dimension of lstm cell
 START_TOKEN = 1  # Changed from original value of 0.
 PRE_EPOCH_NUM = 120  # supervise (maximum likelihood estimation) epochs
 SEED = 88
@@ -47,7 +46,7 @@ BATCH_SIZE = 50
 #########################################################################################
 #  Discriminator  Hyper-parameters
 #########################################################################################
-dis_embedding_dim = 64
+dis_embedding_dim = EMB_DIM
 dis_filter_sizes = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20]
 dis_num_filters = [100, 200, 200, 200, 200, 100, 100, 100, 100, 100, 160, 160]
 dis_dropout_keep_prob = 0.75
@@ -65,20 +64,6 @@ def generate_samples(sess, trainable_model, batch_size, generated_num, output_fi
         for sample in generated_samples:
             buffer = ' '.join([str(x) for x in sample]) + '\n'
             fout.write(buffer)
-
-
-def target_loss(sess, target_lstm, data_loader):
-    # target_loss means the oracle negative log-likelihood tested with the oracle model "target_lstm"
-    # For more details, please see the Section 4 in https://arxiv.org/abs/1609.05473
-    nll = []
-    data_loader.reset_pointer()
-
-    for it in xrange(data_loader.num_batch):
-        batch = data_loader.next_batch()
-        g_loss = sess.run(target_lstm.pretrain_loss, {target_lstm.x: batch})
-        nll.append(g_loss)
-
-    return np.mean(nll)
 
 
 def pre_train_epoch(sess, trainable_model, data_loader):
@@ -102,14 +87,19 @@ def main():
     # Changed because 0 is a bad start token for our data.  (cannot have home label=0)
     # assert START_TOKEN == 0
 
+    # set up logging
+    log_fpath = logger.get_experiment_log_filepath()
+
     gen_data_loader = Gen_Data_loader(BATCH_SIZE, SEQ_LENGTH)
     likelihood_data_loader = Gen_Data_loader(BATCH_SIZE, SEQ_LENGTH) # For testing
     vocab_size = VOCAB_SIZE
     dis_data_loader = Dis_dataloader(BATCH_SIZE, SEQ_LENGTH)
 
     generator = Generator(vocab_size, BATCH_SIZE, EMB_DIM, HIDDEN_DIM, SEQ_LENGTH, START_TOKEN)
-    discriminator = Discriminator(sequence_length=SEQ_LENGTH, num_classes=2, vocab_size=vocab_size, embedding_size=dis_embedding_dim, 
-                                filter_sizes=dis_filter_sizes, num_filters=dis_num_filters, l2_reg_lambda=dis_l2_reg_lambda)
+    discriminator = Discriminator(sequence_length=SEQ_LENGTH, num_classes=2, vocab_size=vocab_size,
+                                    embedding_size=dis_embedding_dim, filter_sizes=dis_filter_sizes,
+                                    num_filters=dis_num_filters, l2_reg_lambda=dis_l2_reg_lambda,
+                                    log_filepath=log_fpath)
 
     if not USE_GPU:
         # Prevent the environment from seeing the available GPUs (to avoid error on matlaber cluster)
@@ -122,8 +112,6 @@ def main():
 
     gen_data_loader.create_batches(real_file)
 
-    # set up logging
-    log_fpath = logger.get_experiment_log_filepath()
     #  pre-train generator
     logger.write_log(log_fpath, 'pre-training generator...')
     for epoch in xrange(PRE_EPOCH_NUM):
@@ -131,7 +119,7 @@ def main():
         if epoch % 5 == 0:
             logger.write_log(log_fpath, 'generator loss:')
             logger.log_progress(log_fpath, epoch, loss)
-            generate_samples(sess, generator, BATCH_SIZE, evale_generated_num, eval_file.format('pretrain'))
+            generate_samples(sess, generator, BATCH_SIZE, eval_generated_num, eval_file.format('pretrain'))
 
     logger.write_log(log_fpath, 'Start pre-training discriminator...')
     # Train 3 epoch on the generated data and do this for 50 times
@@ -149,37 +137,40 @@ def main():
                     discriminator.input_y: y_batch,
                     discriminator.dropout_keep_prob: dis_dropout_keep_prob
                 }
-                _ = sess.run(discriminator.train_op, feed)
+                _d_train_output = sess.run(discriminator.train_op, feed)
 
     logger.write_log(log_fpath, 'finished pre-training discriminator')
     rollout = ROLLOUT(generator, 0.8)
 
     logger.write_log(log_fpath, 'Start Adversarial Training...')
+    g_steps = 1
+    d_steps = 1
+    k = 10
     for batch in range(TOTAL_BATCH):
         buff = 'batch %s/%s' % (batch, TOTAL_BATCH)
         logger.write_log(log_fpath, buff)
         # Train the generator for one step
-        for it in range(1):
+        for it in range(g_steps):
             samples = generator.generate(sess)
-            update_rate = 16  # TODO: experiment with this value
-            rewards = rollout.get_reward(sess, samples, update_rate, discriminator)
+            rollout_num = 16  # TODO: experiment with this value
+            rewards = rollout.get_reward(sess, samples, rollout_num, discriminator)
             feed = {generator.x: samples, generator.rewards: rewards}
             _ = sess.run(generator.g_updates, feed_dict=feed)
 
         # Test
         if batch % 5 == 0 or batch == TOTAL_BATCH - 1:
-            generate_samples(sess, generator, BATCH_SIZE, evale_generated_num, eval_file.format(batch))
+            generate_samples(sess, generator, BATCH_SIZE, eval_generated_num, eval_file.format(batch))
             logger.write_log(log_fpath, 'generated some more eval samples...')
 
         # Update roll-out parameters
         rollout.update_params()
 
         # Train the discriminator
-        for _ in range(5):
+        for _ in range(d_steps):
             generate_samples(sess, generator, BATCH_SIZE, generated_num, fake_file)
             dis_data_loader.load_train_data(real_file, fake_file)
 
-            for _ in range(3):
+            for _ in range(k):
                 dis_data_loader.reset_pointer()
                 for it in xrange(dis_data_loader.num_batch):
                     x_batch, y_batch = dis_data_loader.next_batch()
