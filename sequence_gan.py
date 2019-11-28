@@ -98,8 +98,7 @@ def main():
     generator = Generator(vocab_size, BATCH_SIZE, EMB_DIM, HIDDEN_DIM, SEQ_LENGTH, START_TOKEN)
     discriminator = Discriminator(sequence_length=SEQ_LENGTH, num_classes=2, vocab_size=vocab_size,
                                     embedding_size=dis_embedding_dim, filter_sizes=dis_filter_sizes,
-                                    num_filters=dis_num_filters, l2_reg_lambda=dis_l2_reg_lambda,
-                                    log_filepath=log_fpath)
+                                    num_filters=dis_num_filters, l2_reg_lambda=dis_l2_reg_lambda)
 
     if not USE_GPU:
         # Prevent the environment from seeing the available GPUs (to avoid error on matlaber cluster)
