@@ -28,7 +28,7 @@ real_file = 'data/relabeled_trajectories_1_workweek.txt'
 fake_file = 'save/generated_trajectories.txt'
 eval_file = 'save/eval_file_{}.txt'
 
-TOTAL_BATCH = 200
+TOTAL_BATCH = 250
 generated_num = 5000  #  Previously set to 10,000; num trajectories: 23238.
 eval_generated_num = 500 # For eval files, print less
 
@@ -37,7 +37,7 @@ eval_generated_num = 500 # For eval files, print less
 #  Generator  Hyper-parameters
 ######################################################################################
 EMB_DIM = 128 # embedding dimension -- Changed from original value of 32
-HIDDEN_DIM = 48 # hidden state dimension of lstm cell
+HIDDEN_DIM = 64 # hidden state dimension of lstm cell
 START_TOKEN = 1  # Changed from original value of 0.
 PRE_EPOCH_NUM = 120  # supervise (maximum likelihood estimation) epochs
 SEED = 88
